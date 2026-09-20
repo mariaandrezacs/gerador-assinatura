@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assinatura Gerada</title>
+    <link rel="shortcut icon" href="/static/logo-.png" type="image/x-icon">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h2 {
+            text-align: center;
+        }
+        .box {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            background-color: #f9f9f9;
+        }
+        .box h3 {
+            margin-top: 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .btn.secondary {
+            background-color: #0a2e5c;
+        }
+        .btn.secondary:hover {
+            background-color: #123f7d;
+        }
+        #signature {
+            background: #fff;
+            border: 1px dashed #ccc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        #source {
+            width: 100%;
+            height: 160px;
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+            margin-top: 10px;
+        }
+        #copy-msg {
+            display: none;
+            color: #2e7d32;
+            font-size: 14px;
+        }
+        .back {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h2>Assinatura de email gerada</h2>
+
+    <div class="box">
+        <h3>Imagem (PNG)</h3>
+        <img src="/static/assinatura_email.png" alt="Assinatura de Email">
+        <p><a class="btn" href="/download">Baixar PNG</a></p>
+    </div>
+
+    <div class="box">
+        <h3>Versão HTML (recomendada)</h3>
+        <p>Copie a assinatura abaixo e cole no editor de assinaturas do seu cliente de email:</p>
+        <div id="signature"><table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, Helvetica, sans-serif; color: #0a2e5c;">
+  <tr>
+    <td style="font-size: 15px; font-weight: bold; padding-bottom: 2px;">Maria Andreza Conceição</td>
+  </tr>
+  <tr>
+    <td style="font-size: 12px; color: #444444; padding-bottom: 6px;">Analista de TI &middot; Tecnologia</td>
+  </tr>
+  <tr>
+    <td style="font-size: 12px; padding-bottom: 6px;">
+      (82) 99953-0813 &nbsp;|&nbsp; <a href="mailto:mariaandrezaacs@gmail.com" style="color: #0a2e5c; text-decoration: none;">mariaandrezaacs@gmail.com</a>
+      <br><a href="https://mariaandrezaacs.com.br" style="color: #0a2e5c; text-decoration: none;">mariaandrezaacs.com.br</a>
+    </td>
+  </tr>
+  <tr>
+    <td><img src="http://localhost:5000/static/logo-b.png" width="380" alt="Smile Sa&uacute;de" style="display: block; border: 0;"></td>
+  </tr>
+</table></div>
+        <button class="btn" onclick="copySignature()">Copiar assinatura</button>
+        <button class="btn secondary" onclick="toggleSource()">Ver código HTML</button>
+        <span id="copy-msg">Assinatura copiada!</span>
+        <textarea id="source" readonly>&lt;table cellpadding=&#34;0&#34; cellspacing=&#34;0&#34; border=&#34;0&#34; style=&#34;font-family: Arial, Helvetica, sans-serif; color: #0a2e5c;&#34;&gt;
+  &lt;tr&gt;
+    &lt;td style=&#34;font-size: 15px; font-weight: bold; padding-bottom: 2px;&#34;&gt;Maria Andreza Conceição&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td style=&#34;font-size: 12px; color: #444444; padding-bottom: 6px;&#34;&gt;Analista de TI &amp;middot; Tecnologia&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td style=&#34;font-size: 12px; padding-bottom: 6px;&#34;&gt;
+      (82) 99953-0813 &amp;nbsp;|&amp;nbsp; &lt;a href=&#34;mailto:mariaandrezaacs@gmail.com&#34; style=&#34;color: #0a2e5c; text-decoration: none;&#34;&gt;mariaandrezaacs@gmail.com&lt;/a&gt;
+      &lt;br&gt;&lt;a href=&#34;https://mariaandrezaacs.com.br&#34; style=&#34;color: #0a2e5c; text-decoration: none;&#34;&gt;mariaandrezaacs.com.br&lt;/a&gt;
+    &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;&lt;img src=&#34;http://localhost:5000/static/logo-b.png&#34; width=&#34;380&#34; alt=&#34;Smile Sa&amp;uacute;de&#34; style=&#34;display: block; border: 0;&#34;&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;</textarea>
+    </div>
+
+    <p class="back"><a href="/">Voltar</a></p>
+
+    <script>
+        async function copySignature() {
+            const el = document.getElementById('signature');
+            try {
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'text/html': new Blob([el.innerHTML], { type: 'text/html' }),
+                        'text/plain': new Blob([el.innerText], { type: 'text/plain' })
+                    })
+                ]);
+            } catch (e) {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                document.execCommand('copy');
+                sel.removeAllRanges();
+            }
+            const msg = document.getElementById('copy-msg');
+            msg.style.display = 'inline';
+            setTimeout(() => msg.style.display = 'none', 3000);
+        }
+
+        function toggleSource() {
+            const src = document.getElementById('source');
+            src.style.display = src.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>
