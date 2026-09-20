@@ -1,67 +1,95 @@
-from flask import Flask, request, render_template, send_file
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from flask import Flask, request, render_template, send_file, url_for
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-def create_email_signature(name, title, department, phone, email, website):
-    # Definindo as dimensões da imagem da assinatura
-    width, height = 800, 162  # Largura e altura desejadas da assinatura
+# URL pública da logo usada na assinatura HTML. Para o HTML funcionar no cliente
+# de email dos destinatários, hospede a imagem e aponte aqui
+# (ex.: "https://seudominio.com/logo-b.png"). Se None, usa a URL local.
+PUBLIC_LOGO_URL = None
+
+# Dimensões recomendadas para assinatura de email: 300-400 x 70-100 px
+SIGNATURE_WIDTH, SIGNATURE_HEIGHT = 400, 85
+SIGNATURE_PATH = "static/assinatura_email.png"
+
+
+def _text_start_x(logo, margin=8):
+    """Detecta até onde vai o conteúdo escuro na esquerda (ex.: símbolo da logo)
+    para posicionar o texto depois dele, evitando sobreposição."""
+    px = logo.convert("RGB").load()
+    w, h = logo.size
+    last = 0
+    for x in range(w // 3):
+        for y in range(h):
+            r, g, b = px[x, y]
+            if r + g + b < 150:
+                last = x
+                break
+    return last + margin if last else 12
+
+
+def create_email_signature(name, title, department, phone, email, website, background_path="static/logo-b.png"):
     background_color = (255, 255, 255)
-    text_color = (0, 0, 0)
-    font_size = 18  # Tamanho da fonte
+    text_color = (10, 46, 92)  # azul escuro, legível sobre o gradiente claro
     font_path = "arial.ttf"  # Certifique-se de que o arquivo de fonte está disponível
 
-    # Abrindo a logo
-    logo_path = "static/logo.png"  # Certifique-se de que o arquivo da logo está no diretório correto
+    # Abrindo a imagem de fundo
+    logo_path = background_path  # Certifique-se de que o arquivo da logo está no diretório correto
     try:
         logo = Image.open(logo_path).convert("RGBA")
-        logo = logo.resize((width, height))  # Redimensionando a logo para as novas dimensões da assinatura
+        # Ajusta às dimensões da assinatura mantendo a proporção
+        # (redimensiona e corta o excesso no centro, sem distorcer)
+        logo = ImageOps.fit(logo, (SIGNATURE_WIDTH, SIGNATURE_HEIGHT), Image.LANCZOS)
     except IOError:
-        print("Logo não encontrada. Certifique-se de que o arquivo da logo está no diretório correto.")
-        return
+        print("Imagem de fundo não encontrada. Usando fundo branco.")
+        logo = Image.new("RGBA", (SIGNATURE_WIDTH, SIGNATURE_HEIGHT), background_color)
 
     # Criando uma nova imagem com fundo branco
-    img = Image.new("RGBA", (width, height), background_color)
+    img = Image.new("RGBA", (SIGNATURE_WIDTH, SIGNATURE_HEIGHT), background_color)
     draw = ImageDraw.Draw(img)
 
     # Combinando a logo com a imagem de fundo
     img.paste(logo, (0, 0), logo)  # Colocando a logo como fundo, preservando a transparência
 
-    # Carregando a fonte com o tamanho especificado
+    # Carregando as fontes
     try:
-        font = ImageFont.truetype(font_path, font_size)
+        font_name = ImageFont.truetype(font_path, 13)
+        font = ImageFont.truetype(font_path, 11)
     except IOError:
         print("Fonte não encontrada. Certifique-se de que o arquivo de fonte está no diretório correto.")
         return
 
-    # Definindo as posições dos textos
-    width = 20
-    x, y = width, width
+    # Texto começa após o símbolo na borda esquerda da imagem de fundo
+    x, y = _text_start_x(logo), 6
+    line_height = 13
 
-    # Escrevendo os textos na imagem
-    draw.text((x, y), name, fill=text_color, font=font)
-    y += font_size + 2
-    draw.text((x, y), title, fill=text_color, font=font)
-    y += font_size + 5
-    draw.text((x, y), department, fill=text_color, font=font)
-    y += font_size + 2
-    draw.text((x, y), phone, fill=text_color, font=font)
-    y += font_size + 2
-    draw.text((x, y), email, fill=text_color, font=font)
-    y += font_size + 2
-    draw.text((x, y), website, fill=text_color, font=font)
+    draw.text((x, y), name, fill=text_color, font=font_name)
+    y += 16
+
+    lines = [
+        f"{title} · {department}" if department else title,
+        phone,
+        email,
+        website,
+    ]
+    for line in filter(None, lines):
+        draw.text((x, y), line, fill=text_color, font=font)
+        y += line_height
 
     # Salvando a imagem
     img = img.convert("RGB")  # Converte de RGBA para RGB para salvar como PNG
-    signature_path = "static/assinatura_email.png"
-    img.save(signature_path)
+    img.save(SIGNATURE_PATH)
     print("Assinatura de email gerada com sucesso!")
-    return signature_path
+    return SIGNATURE_PATH
+
 
 @app.route('/')
 def form():
     return render_template('form.html')
+
 
 @app.route('/generate_signature', methods=['POST'])
 def generate_signature():
@@ -70,20 +98,56 @@ def generate_signature():
     department = request.form['department']
     phone = request.form['phone']
     email = request.form['email']
-    website = request.form['website']
+    website = request.form['website'].strip()
 
-    signature_path = create_email_signature(name, title, department, phone, email, website)
-    return '''
-    <h2>Assinatura de email gerada com sucesso!</h2>
-    <img src="/static/assinatura_email.png" alt="Assinatura de Email">
-    <br><br>
-    <a href="/download">Baixar Assinatura</a>
-    '''
+    # Imagem de fundo enviada pelo usuário (opcional)
+    background_file = request.files.get('background')
+    background_filename = None
+    warning = None
+    if background_file and background_file.filename:
+        ext = os.path.splitext(secure_filename(background_file.filename))[1].lower()
+        if ext in ('.png', '.jpg', '.jpeg'):
+            background_filename = f"fundo_custom{ext}"
+            background_file.save(os.path.join('static', background_filename))
+            with Image.open(os.path.join('static', background_filename)) as bg:
+                bw, bh = bg.size
+            if bw < 300 or bh < 70:
+                warning = (f"A imagem enviada ({bw}×{bh} px) é menor que o recomendado "
+                           f"(300–400 × 70–100 px) e pode ficar com baixa qualidade.")
+            elif bw > 800 or bh > 200:
+                warning = (f"A imagem enviada ({bw}×{bh} px) é maior que o recomendado "
+                           f"(300–400 × 70–100 px) e será reduzida para 400×85 px.")
+            elif abs(bw / bh - SIGNATURE_WIDTH / SIGNATURE_HEIGHT) > 0.5:
+                warning = (f"A proporção da imagem enviada ({bw}×{bh} px) difere da assinatura; "
+                           f"as bordas serão cortadas para ajustar a 400×85 px.")
+
+    background_path = os.path.join('static', background_filename) if background_filename else "static/logo-b.png"
+    create_email_signature(name, title, department, phone, email, website, background_path)
+
+    logo_url = PUBLIC_LOGO_URL or url_for(
+        'static', filename=background_filename or 'logo-b.png', _external=True)
+    website_url = ""
+    if website:
+        website_url = website if website.startswith(("http://", "https://")) else f"https://{website}"
+
+    signature_html = render_template(
+        'signature.html',
+        name=name,
+        title=title,
+        department=department,
+        phone=phone,
+        email=email,
+        website=website,
+        website_url=website_url,
+        logo_url=logo_url,
+    )
+    return render_template('result.html', signature_html=signature_html, warning=warning)
+
 
 @app.route('/download')
 def download_signature():
-    signature_path = "static/assinatura_email.png"
-    return send_file(signature_path, as_attachment=True)
+    return send_file(SIGNATURE_PATH, as_attachment=True)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
