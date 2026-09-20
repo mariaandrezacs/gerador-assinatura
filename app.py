@@ -107,19 +107,25 @@ def generate_signature():
     if background_file and background_file.filename:
         ext = os.path.splitext(secure_filename(background_file.filename))[1].lower()
         if ext in ('.png', '.jpg', '.jpeg'):
-            background_filename = f"fundo_custom{ext}"
-            background_file.save(os.path.join('static', background_filename))
-            with Image.open(os.path.join('static', background_filename)) as bg:
-                bw, bh = bg.size
-            if bw < 300 or bh < 70:
-                warning = (f"A imagem enviada ({bw}×{bh} px) é menor que o recomendado "
-                           f"(300–400 × 70–100 px) e pode ficar com baixa qualidade.")
-            elif bw > 800 or bh > 200:
-                warning = (f"A imagem enviada ({bw}×{bh} px) é maior que o recomendado "
-                           f"(300–400 × 70–100 px) e será reduzida para 400×85 px.")
-            elif abs(bw / bh - SIGNATURE_WIDTH / SIGNATURE_HEIGHT) > 0.5:
-                warning = (f"A proporção da imagem enviada ({bw}×{bh} px) difere da assinatura; "
-                           f"as bordas serão cortadas para ajustar a 400×85 px.")
+            save_path = os.path.join('static', f"fundo_custom{ext}")
+            background_file.save(save_path)
+            try:
+                with Image.open(save_path) as bg:
+                    bw, bh = bg.size
+            except Exception:
+                os.remove(save_path)
+                warning = "O arquivo enviado não é uma imagem válida. Foi usado o fundo padrão."
+            else:
+                background_filename = f"fundo_custom{ext}"
+                if bw < 300 or bh < 70:
+                    warning = (f"A imagem enviada ({bw}×{bh} px) é menor que o recomendado "
+                               f"(300–400 × 70–100 px) e pode ficar com baixa qualidade.")
+                elif bw > 800 or bh > 200:
+                    warning = (f"A imagem enviada ({bw}×{bh} px) é maior que o recomendado "
+                               f"(300–400 × 70–100 px) e será reduzida para 400×85 px.")
+                elif abs(bw / bh - SIGNATURE_WIDTH / SIGNATURE_HEIGHT) > 0.5:
+                    warning = (f"A proporção da imagem enviada ({bw}×{bh} px) difere da assinatura; "
+                               f"as bordas serão cortadas para ajustar a 400×85 px.")
 
     background_path = os.path.join('static', background_filename) if background_filename else "static/logo-b.png"
     create_email_signature(name, title, department, phone, email, website, background_path)
