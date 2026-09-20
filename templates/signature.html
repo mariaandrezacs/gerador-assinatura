@@ -1,0 +1,19 @@
+<table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, Helvetica, sans-serif; color: #0a2e5c;">
+  <tr>
+    <td style="font-size: 15px; font-weight: bold; padding-bottom: 2px;">{{ name }}</td>
+  </tr>
+  <tr>
+    <td style="font-size: 12px; color: #444444; padding-bottom: 6px;">{{ title }}{% if department %} &middot; {{ department }}{% endif %}</td>
+  </tr>
+  <tr>
+    <td style="font-size: 12px; padding-bottom: 6px;">
+      {{ phone }} &nbsp;|&nbsp; <a href="mailto:{{ email }}" style="color: #0a2e5c; text-decoration: none;">{{ email }}</a>
+      {%- if website %}
+      <br><a href="{{ website_url }}" style="color: #0a2e5c; text-decoration: none;">{{ website }}</a>
+      {%- endif %}
+    </td>
+  </tr>
+  <tr>
+    <td><img src="{{ logo_url }}" width="380" alt="Smile Sa&uacute;de" style="display: block; border: 0;"></td>
+  </tr>
+</table>
